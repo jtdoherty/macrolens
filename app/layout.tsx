@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
 import { Figtree, Playfair_Display } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
-import { Sidebar } from '@/components/Sidebar';
 
-// Optimized fonts via next/font — self-hosted, no extra network round-trip,
-// no layout shift. CSS variables exposed for use in globals.css if we ever
-// switch to var(--font-figtree) instead of named families.
+// Optimized fonts via next/font — self-hosted, no extra round-trip,
+// no layout shift. CSS variables exposed for use in globals.css.
 const figtree = Figtree({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
@@ -25,17 +24,15 @@ export const metadata: Metadata = {
   description: 'Revenue forecasting driven by macro signals.',
 };
 
+// Root layout is intentionally minimal: html, body, ClerkProvider.
+// Per-area chrome (sidebar for dashboard, centered card for auth) lives in
+// route-group layouts at app/(dashboard)/layout.tsx and app/(auth)/layout.tsx.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${figtree.variable} ${playfair.variable}`}>
-      <body>
-        <div id="main-app" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100vh', minHeight: 0, overflow: 'hidden' }}>
-          <div className="app">
-            <Sidebar />
-            <main className="main">{children}</main>
-          </div>
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${figtree.variable} ${playfair.variable}`}>
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

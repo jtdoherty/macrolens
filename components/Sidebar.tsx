@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UserButton } from '@clerk/nextjs';
 import { useSidebarCollapsed, toggleSidebarCollapsed } from '@/lib/store';
 
 const NAV = {
@@ -56,11 +57,26 @@ export function Sidebar() {
           ))}
         </div>
         <div className="sb-foot">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 0 12px',
+              borderBottom: '1px solid rgba(255,255,255,.07)',
+              marginBottom: 12,
+            }}
+          >
+            <UserButton />
+            <span className="nb-label" style={{ fontSize: 12, color: 'var(--slate)' }}>
+              Account
+            </span>
+          </div>
           <div className="sr">
             <div className="sd"></div>
-            <span>Simulated data feed</span>
+            <span className="nb-label">Simulated data feed</span>
           </div>
-          <div className="st">Phase 1 · mock data</div>
+          <div className="st nb-label">Phase 2 · auth wired</div>
         </div>
       </aside>
     </div>

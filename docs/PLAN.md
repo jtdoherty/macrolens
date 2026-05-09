@@ -87,16 +87,16 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
 
 Goal: marketing landing stays public, dashboard requires Clerk login + active Stripe subscription.
 
-- [ ] 2.1 Sign up for Clerk, add `@clerk/nextjs`, wrap root with `<ClerkProvider>`
-- [ ] 2.2 Add `app/sign-in/[[...sign-in]]/page.tsx` and `app/sign-up/[[...sign-up]]/page.tsx`
-- [ ] 2.3 Add `middleware.ts` to gate `/dashboard/*` routes
-- [ ] 2.4 Replace friend's localStorage auth with Clerk's `<UserButton />` and `auth()`
+- [x] 2.1 Sign up for Clerk, add `@clerk/nextjs` (v7.3.3), wrap root with `<ClerkProvider>`. Keys live in `.env.local` (gitignored).
+- [x] 2.2 Add `app/(auth)/sign-in/[[...sign-in]]/page.tsx` and `app/(auth)/sign-up/[[...sign-up]]/page.tsx` mounting `<SignIn />` / `<SignUp />`.
+- [x] 2.3 Add `proxy.ts` at project root (Next.js 16 renamed `middleware.ts` → `proxy.ts`) using `clerkMiddleware()` + `createRouteMatcher`. Gates everything except `/sign-in/*`, `/sign-up/*`, and `/api/forecast` (last one stays open until 2.10).
+- [x] 2.4 Add Clerk's `<UserButton />` to the sidebar footer. Reorganized routes into `app/(dashboard)/` (sidebar layout) and `app/(auth)/` (centered card on dark gradient) route groups.
 - [ ] 2.5 Sign up for Stripe (test mode), create one Product + monthly Price
 - [ ] 2.6 Add `app/api/stripe/checkout/route.ts` — creates a Checkout Session
 - [ ] 2.7 Add `app/api/stripe/webhook/route.ts` — handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - [ ] 2.8 Add `/pricing` page with the subscribe button → Checkout
 - [ ] 2.9 Add 7-day free trial to the Price (no credit card up-front via Clerk's signup, then Checkout when ready to subscribe)
-- [ ] 2.10 Gate `/api/forecast` to return 402 if no active subscription
+- [ ] 2.10 Gate `/api/forecast` to return 402 if no active subscription, then remove from `proxy.ts` public matcher
 
 ### Phase 3 — Database + real cron
 
@@ -139,14 +139,26 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 1 is COMPLETE — all 20 steps checked off, smoke-test passed.** The dashboard works end-to-end with mock data. Ready to deploy to Vercel as-is, or move straight into Phase 2.
+Last updated: 2026-05-09. **Phase 2 part 1 (Clerk auth) is DONE — steps 2.1–2.4.** The app now requires sign-in. Visiting any route while signed out redirects to `/sign-in`. After sign-up/sign-in, the user lands on `/` with the sidebar + UserButton in the footer. Build / lint / typecheck all clean.
 
-**Next session = Phase 2 step 2.1.** Before that step, the user needs to:
-1. Sign up at [clerk.com](https://clerk.com) (free tier is generous)
-2. Create a new application — pick email + Google auth providers
-3. Copy the **Publishable key** (`pk_test_...`) and **Secret key** (`sk_test_...`) from the API Keys page
-4. Have those keys ready — we'll add them to `.env.local` and to Vercel env vars
+**Smoke-test step before continuing:**
+1. `npm run dev`
+2. Visit `http://localhost:3000` — should redirect to `/sign-in`
+3. Click "Sign up", create an account (use a real email — Clerk verifies)
+4. After sign-up, you should land on `/` with the dashboard
+5. Click your avatar in the sidebar footer — Clerk's UserButton menu should open
+6. Sign out, verify it kicks you back to `/sign-in`
 
-Stripe (steps 2.5+) doesn't need pre-work yet — we'll get to it after Clerk is wired up.
+**Next session = Phase 2 step 2.5 (Stripe).** Before that step, the user needs to:
+1. Sign up at [stripe.com](https://stripe.com) — start in **Test mode** (toggle top-left)
+2. From the Dashboard → Developers → API keys, grab:
+   - **Publishable key** (`pk_test_...`)
+   - **Secret key** (`sk_test_...`)
+3. Create a Product:
+   - Dashboard → Product catalog → Add product
+   - Name: `MacroLens Pro` (or similar)
+   - Pricing: **Recurring**, monthly, pick a price (e.g. $19/month)
+   - Save — note the resulting **Price ID** (`price_...`)
+4. Have the publishable key, secret key, and price ID ready
 
-Resume by reading the Phase 2 unchecked boxes below, top-down.
+Resume by reading the Phase 2 unchecked boxes below, top-down (start at 2.5).
