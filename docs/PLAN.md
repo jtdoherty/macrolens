@@ -64,11 +64,11 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
   - [x] `components/Sidebar.tsx` — navigation with `Link`, collapse state
 - [x] 1.9 Port homepage at `app/page.tsx` (hero + summary stats + best/worst + macro flash + all-tickers table)
 - [x] 1.10 Port `app/macro/page.tsx` — Macro Dashboard (regime hero, 6 chips, ticker heatmap, 6 indicator group cards)
-- [ ] 1.11 Port `app/screener/page.tsx` — table with filters/sort over PL_EXTENDED
-- [ ] 1.12 Port `app/forecast/page.tsx` — single-ticker forecast view
+- [x] 1.11 Port `app/screener/page.tsx` — server component with searchParams filters (search, sector, signal, confidence, sort) + WatchlistStar in last column
+- [x] 1.12 Port `app/forecast/page.tsx` — server component with `?ticker=` searchParam, summary cards, ValuationBand, three forecast cards, RevenueChart, walk-forward, macro drivers
 - [ ] 1.13 Port `app/comparison/page.tsx` — side-by-side comparison
 - [ ] 1.14 Port `app/portfolio/page.tsx` — localStorage holdings
-- [ ] 1.15 Port `app/watchlist/page.tsx` — localStorage tickers
+- [x] 1.15 Port `app/watchlist/page.tsx` — server shell + client `<WatchlistList>` reading from `lib/store.ts`
 - [ ] 1.16 Port `app/ticker/[symbol]/page.tsx` — per-ticker detail with tabs (Forecast / Overview / Income / Balance / Cash Flow / Ratios)
 - [x] 1.17a `components/charts/RevenueChart.tsx` — bar (actuals) + line overlays (macro-adj forecast + anchor)
 - [x] 1.17b `components/ValuationBand.tsx` — pure CSS band with bear/base/bull markers + price pin
@@ -133,8 +133,10 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 1 step 1.10 complete + chart foundation built.** Homepage, sidebar, Macro Dashboard, all 20 tickers + 5 financial statement sets, RevenueChart, and ValuationBand are all done. The dev build is clean.
+Last updated: 2026-05-09. **Phase 1 steps 1.11, 1.12, 1.15 done.** Forecast View, Screener, and Watchlist are live. `lib/store.ts` (localStorage helpers for watchlist + portfolio) and the `<WatchlistStar>` toggle component are in place. Build is clean; 5 routes are dynamic (forecast, screener, ticker/[symbol]) and the rest are static.
 
-Next session: pick up at **1.12 (Forecast View)** — it's the heaviest remaining page and exercises both chart components in anger. After that, 1.11 Screener (over PL_EXTENDED), then 1.16 Ticker Detail (uses FINANCIALS), then the smaller pages 1.13–1.15. Finish Phase 1 with 1.18–1.20.
+Pages still TODO: **1.13 Comparison**, **1.14 Portfolio**, **1.16 Ticker Detail** (the biggest — has 6 tabs and uses FINANCIALS extensively). After those, Phase 1.17c (financial chart wrappers for Ticker Detail), 1.18 (`/api/forecast` route), 1.19 (jitter cron), 1.20 (full local verification).
+
+Recommended next session order: **Comparison → Portfolio → Ticker Detail.** Comparison and Portfolio are smaller and warm up patterns Ticker Detail will reuse.
 
 Resume by reading the unchecked boxes above, top-down.
