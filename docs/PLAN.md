@@ -66,8 +66,8 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
 - [x] 1.10 Port `app/macro/page.tsx` — Macro Dashboard (regime hero, 6 chips, ticker heatmap, 6 indicator group cards)
 - [x] 1.11 Port `app/screener/page.tsx` — server component with searchParams filters (search, sector, signal, confidence, sort) + WatchlistStar in last column
 - [x] 1.12 Port `app/forecast/page.tsx` — server component with `?ticker=` searchParam, summary cards, ValuationBand, three forecast cards, RevenueChart, walk-forward, macro drivers
-- [ ] 1.13 Port `app/comparison/page.tsx` — side-by-side comparison
-- [ ] 1.14 Port `app/portfolio/page.tsx` — localStorage holdings
+- [x] 1.13 Port `app/comparison/page.tsx` — server component with `?tickers=A,B,C` searchParam, multi-ticker revenue chart, grouped forecast YoY bar chart, metrics table
+- [x] 1.14 Port `app/portfolio/page.tsx` — server shell + client `<PortfolioList>` with add/remove form, summary stats, allocation donut + P&L bar + forecast YoY bar charts, per-position cards
 - [x] 1.15 Port `app/watchlist/page.tsx` — server shell + client `<WatchlistList>` reading from `lib/store.ts`
 - [ ] 1.16 Port `app/ticker/[symbol]/page.tsx` — per-ticker detail with tabs (Forecast / Overview / Income / Balance / Cash Flow / Ratios)
 - [x] 1.17a `components/charts/RevenueChart.tsx` — bar (actuals) + line overlays (macro-adj forecast + anchor)
@@ -133,10 +133,8 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 1 steps 1.11, 1.12, 1.15 done.** Forecast View, Screener, and Watchlist are live. `lib/store.ts` (localStorage helpers for watchlist + portfolio) and the `<WatchlistStar>` toggle component are in place. Build is clean; 5 routes are dynamic (forecast, screener, ticker/[symbol]) and the rest are static.
+Last updated: 2026-05-09. **Phase 1 steps 1.11–1.15 all done.** Comparison and Portfolio are live. Two new chart bundles: `components/charts/ComparisonCharts.tsx` (multi-ticker line + grouped bar) and `components/charts/PortfolioCharts.tsx` (donut + P&L bar + YoY bar). All 8 dashboard pages render content; only Ticker Detail (`/ticker/[symbol]`) is still a stub.
 
-Pages still TODO: **1.13 Comparison**, **1.14 Portfolio**, **1.16 Ticker Detail** (the biggest — has 6 tabs and uses FINANCIALS extensively). After those, Phase 1.17c (financial chart wrappers for Ticker Detail), 1.18 (`/api/forecast` route), 1.19 (jitter cron), 1.20 (full local verification).
-
-Recommended next session order: **Comparison → Portfolio → Ticker Detail.** Comparison and Portfolio are smaller and warm up patterns Ticker Detail will reuse.
+Only one big page remains: **1.16 Ticker Detail** with 6 tabs (Forecast / Overview / Income Statement / Balance Sheet / Cash Flow / Key Ratios), uses `FINANCIALS` extensively, will need ~6–8 small chart wrappers (1.17c). After that: 1.18 (`/api/forecast` route), 1.19 (jitter cron), 1.20 (full local verification) and Phase 1 is done.
 
 Resume by reading the unchecked boxes above, top-down.
