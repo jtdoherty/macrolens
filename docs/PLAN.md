@@ -69,13 +69,13 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
 - [x] 1.13 Port `app/comparison/page.tsx` — server component with `?tickers=A,B,C` searchParam, multi-ticker revenue chart, grouped forecast YoY bar chart, metrics table
 - [x] 1.14 Port `app/portfolio/page.tsx` — server shell + client `<PortfolioList>` with add/remove form, summary stats, allocation donut + P&L bar + forecast YoY bar charts, per-position cards
 - [x] 1.15 Port `app/watchlist/page.tsx` — server shell + client `<WatchlistList>` reading from `lib/store.ts`
-- [ ] 1.16 Port `app/ticker/[symbol]/page.tsx` — per-ticker detail with tabs (Forecast / Overview / Income / Balance / Cash Flow / Ratios)
+- [x] 1.16 Port `app/ticker/[symbol]/page.tsx` — per-ticker detail with 6 tabs (Forecast / Overview / Income / Balance / Cash Flow / Ratios) via `?tab=` searchParam, tab content in `_tabs/` private folder
 - [x] 1.17a `components/charts/RevenueChart.tsx` — bar (actuals) + line overlays (macro-adj forecast + anchor)
 - [x] 1.17b `components/ValuationBand.tsx` — pure CSS band with bear/base/bull markers + price pin
-- [ ] 1.17c Ratio/financial chart wrappers for the Ticker Detail page
-- [ ] 1.18 Add `app/api/forecast/route.ts` returning mock data (frontend fetches via this instead of importing directly)
-- [ ] 1.19 Add a 1-hour cron-jitter refresh: every fetch slightly perturbs numbers (±0.5%) so dashboard visibly "updates"
-- [ ] 1.20 Verify everything runs locally and looks correct
+- [x] 1.17c `components/charts/FinancialChart.tsx` — single generic wrapper for all bar/line/mixed financial charts (replaces 6+ specialized components). Handles diverging colors, dollar/percent/ratio formats, line-on-bar overlays.
+- [x] 1.18 Add `app/api/forecast/route.ts` — GET with `?ticker=`, `?extended=1`, `?jitter=1` query params. Cache-Control set per request type.
+- [x] 1.19 Jitter built into the API route (`?jitter=1`). When enabled, forecast_revenue_yoy / forecast_revenue / anchor_yoy / macro_only / current_price get ±0.5% perturbation per request.
+- [ ] 1.20 Smoke-test in browser: walk every page, every tab, every filter combination. (User-facing verification step, not a code change.)
 
 ### Phase 2 — Auth + paywall
 
@@ -133,8 +133,10 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 1 steps 1.11–1.15 all done.** Comparison and Portfolio are live. Two new chart bundles: `components/charts/ComparisonCharts.tsx` (multi-ticker line + grouped bar) and `components/charts/PortfolioCharts.tsx` (donut + P&L bar + YoY bar). All 8 dashboard pages render content; only Ticker Detail (`/ticker/[symbol]`) is still a stub.
+Last updated: 2026-05-09. **Phase 1 is structurally COMPLETE.** All 8 dashboard pages render real content. Ticker Detail has 6 working tabs over `FINANCIALS`. The API route is up at `/api/forecast` with optional `?jitter=1` for ±0.5% perturbation. Build is clean: 4 static + 6 dynamic routes.
 
-Only one big page remains: **1.16 Ticker Detail** with 6 tabs (Forecast / Overview / Income Statement / Balance Sheet / Cash Flow / Key Ratios), uses `FINANCIALS` extensively, will need ~6–8 small chart wrappers (1.17c). After that: 1.18 (`/api/forecast` route), 1.19 (jitter cron), 1.20 (full local verification) and Phase 1 is done.
+The only remaining Phase 1 task is **1.20 — manual smoke-test in the browser**. The user should walk every page, click every tab, hit every filter combination, and confirm visual fidelity to the reference design. Anything that's broken or visually off becomes a small follow-up commit.
+
+After 1.20, we move to **Phase 2 — Auth + paywall** (Clerk + Stripe). See the Phase 2 section below for the step-by-step. The first action is signing up at clerk.com and grabbing the publishable + secret keys.
 
 Resume by reading the unchecked boxes above, top-down.
