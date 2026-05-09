@@ -1,15 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { addPosition, getPortfolio, removePosition, updatePositionNote } from '@/lib/store';
+import { useState } from 'react';
+import { addPosition, removePosition, updatePositionNote, usePortfolio } from '@/lib/store';
 import { PL_EXTENDED } from '@/lib/data';
 import { fmt, pct, yc, sb, cb } from '@/lib/helpers';
 import type { Holding } from '@/lib/types';
 import { AllocationDonut, PnlBar, ForecastYoYBar, type PortfolioRow } from '@/components/charts/PortfolioCharts';
 
 export function PortfolioList() {
-  const [holdings, setHoldings] = useState<Holding[] | null>(null);
+  const holdings = usePortfolio();
 
   // Form state
   const [t, setT] = useState('');
@@ -18,12 +18,6 @@ export function PortfolioList() {
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setHoldings(getPortfolio());
-  }, []);
-
-  if (holdings === null) return <div style={{ minHeight: 300 }} />;
 
   const submit = () => {
     setError(null);
@@ -34,17 +28,17 @@ export function PortfolioList() {
       setError('Please fill in ticker, shares, and average cost.');
       return;
     }
-    setHoldings(addPosition({ ticker, shares, avgCost, date, notes }));
+    addPosition({ ticker, shares, avgCost, date, notes });
     setT(''); setSh(''); setCost(''); setDate(''); setNotes('');
   };
 
   const remove = (i: number) => {
     if (!confirm('Remove this position?')) return;
-    setHoldings(removePosition(i));
+    removePosition(i);
   };
 
   const saveNote = (i: number, val: string) => {
-    setHoldings(updatePositionNote(i, val));
+    updatePositionNote(i, val);
   };
 
   // Aggregate stats

@@ -56,6 +56,8 @@ In Phase 1 it's also fine for server components to import `lib/data.ts` directly
 - **Don't add fields to `ForecastPayload` casually.** Update `docs/CONTRACT.md` in the same commit and explain why.
 - **Don't introduce Tailwind, CSS-in-JS, or another styling system.**
 - **Don't pre-build Phase 2/3 features into Phase 1.** The plan is intentionally phased.
+- **Don't read localStorage with `useEffect(() => setState(...), [])`.** That's a `react-hooks/set-state-in-effect` lint error in React 19. Use the `useWatchlist()` / `usePortfolio()` / `useSidebarCollapsed()` hooks from `lib/store.ts` — they wrap `useSyncExternalStore` correctly with cached snapshots and cross-tab sync.
+- **Don't use `<link>` tags for Google Fonts.** Use `next/font/google` (see `app/layout.tsx`) for proper self-hosting and zero layout shift.
 
 ## Commands
 

@@ -1,6 +1,24 @@
 import type { Metadata } from 'next';
+import { Figtree, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
+
+// Optimized fonts via next/font — self-hosted, no extra network round-trip,
+// no layout shift. CSS variables exposed for use in globals.css if we ever
+// switch to var(--font-figtree) instead of named families.
+const figtree = Figtree({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-figtree',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'MacroLens — Revenue Intelligence',
@@ -9,15 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${figtree.variable} ${playfair.variable}`}>
       <body>
         <div id="main-app" style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100vh', minHeight: 0, overflow: 'hidden' }}>
           <div className="app">

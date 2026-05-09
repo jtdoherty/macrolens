@@ -1,22 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { isWatched, toggleWatchlist } from '@/lib/store';
+import { useIsWatched, toggleWatchlist } from '@/lib/store';
 
-// Small star toggle. Renders a hollow ☆ when not in the watchlist, filled ★ when in.
-// On click, flips the state in localStorage and re-renders.
+// Small star toggle. Renders ☆ when not in the watchlist, ★ when in.
+// Multiple stars on the same ticker stay in sync via useSyncExternalStore.
 export function WatchlistStar({ ticker }: { ticker: string }) {
-  const [watched, setWatched] = useState(false);
-
-  useEffect(() => {
-    setWatched(isWatched(ticker));
-  }, [ticker]);
+  const watched = useIsWatched(ticker);
 
   const onClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const next = toggleWatchlist(ticker);
-    setWatched(next.includes(ticker));
+    toggleWatchlist(ticker);
   };
 
   return (

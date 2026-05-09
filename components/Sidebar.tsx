@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useSidebarCollapsed, toggleSidebarCollapsed } from '@/lib/store';
 
 const NAV = {
   Analysis: [
@@ -20,29 +20,14 @@ const NAV = {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Restore collapse state on mount.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('ml_sb_collapsed') === '1') setCollapsed(true);
-    } catch {}
-  }, []);
-
-  const toggle = () => {
-    setCollapsed((c) => {
-      const next = !c;
-      try { localStorage.setItem('ml_sb_collapsed', next ? '1' : '0'); } catch {}
-      return next;
-    });
-  };
+  const collapsed = useSidebarCollapsed();
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
     <div className="sidebar-wrap">
-      <button className="sb-toggle" onClick={toggle} title="Toggle sidebar">
+      <button className="sb-toggle" onClick={toggleSidebarCollapsed} title="Toggle sidebar">
         <span className="arrow">‹</span>
       </button>
       <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>

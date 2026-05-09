@@ -1,36 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { getWatchlist, removeFromWatchlist, toggleWatchlist } from '@/lib/store';
+import { useState } from 'react';
+import { useWatchlist, removeFromWatchlist, toggleWatchlist } from '@/lib/store';
 import { PL_EXTENDED } from '@/lib/data';
 import { pct, yc, sb, cb } from '@/lib/helpers';
 
 const COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
 
 export function WatchlistList() {
-  // null = not yet hydrated; avoids SSR/CSR mismatch from localStorage.
-  const [tickers, setTickers] = useState<string[] | null>(null);
+  const tickers = useWatchlist();
   const [draft, setDraft] = useState('');
-
-  useEffect(() => {
-    setTickers(getWatchlist());
-  }, []);
-
-  if (tickers === null) {
-    // Hydration placeholder. Same height as the empty state to avoid layout jump.
-    return <div style={{ minHeight: 200 }} />;
-  }
 
   const add = () => {
     const t = draft.trim().toUpperCase();
     if (!t || tickers.includes(t)) return;
-    setTickers(toggleWatchlist(t));
+    toggleWatchlist(t);
     setDraft('');
-  };
-
-  const remove = (t: string) => {
-    setTickers(removeFromWatchlist(t));
   };
 
   return (
@@ -69,7 +55,7 @@ export function WatchlistList() {
                     This ticker isn&apos;t in MacroLens yet. Coverage requests will be added in a later phase.
                   </div>
                 </div>
-                <button className="wlrm" onClick={() => remove(t)} aria-label={`Remove ${t}`}>✕</button>
+                <button className="wlrm" onClick={() => removeFromWatchlist(t)} aria-label={`Remove ${t}`}>✕</button>
               </div>
             );
           }
@@ -95,7 +81,7 @@ export function WatchlistList() {
                 <div style={{ fontSize: 15, fontWeight: 600 }}>${d.current_price.toFixed(2)}</div>
                 <div className="wlsb">Current</div>
               </div>
-              <button className="wlrm" onClick={() => remove(t)} aria-label={`Remove ${t}`}>✕</button>
+              <button className="wlrm" onClick={() => removeFromWatchlist(t)} aria-label={`Remove ${t}`}>✕</button>
             </div>
           );
         })

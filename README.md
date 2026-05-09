@@ -2,7 +2,7 @@
 
 Revenue forecasting dashboard driven by macro signals. Connects FRED macro indicators to company quarterly revenue using walk-forward validated models, exposing anchor forecasts, macro signals, and adaptive blends with valuation bands per ticker.
 
-> **Status:** Phase 1 — Next.js scaffold with mock data. See [`docs/PLAN.md`](docs/PLAN.md) for the full roadmap and current progress.
+> **Status:** Phase 1 complete — full dashboard works locally with mock data. Phase 2 (Clerk auth + Stripe paywall) is next. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## What it does
 
@@ -14,13 +14,28 @@ For each tracked ticker, the app shows three independent next-quarter revenue es
 
 Plus a valuation band (bear / base / bull, with trustworthiness-adjusted variants), walk-forward MAE and R², and the selected macro drivers for transparency.
 
+## Features (Phase 1)
+
+| Page | What it does |
+|------|--------------|
+| `/` | Homepage with hero, summary stats, best/worst forecast tickers, macro flash strip, all-tickers table |
+| `/macro` | Macro Dashboard: regime score, 6 regime chips, ticker heatmap, 18 indicators in 6 categories |
+| `/screener` | Filterable table over 20 tickers (search, sector, signal, confidence, sort — all in URL) |
+| `/forecast?ticker=AAPL` | Single-ticker forecast: summary cards, valuation band, 3-layer forecast, revenue chart, walk-forward stats |
+| `/comparison?tickers=AAPL,MSFT,...` | Side-by-side for up to 4 tickers with revenue line + grouped YoY bar charts |
+| `/portfolio` | localStorage holdings tracker with allocation donut, P&L, and forecast-YoY charts |
+| `/watchlist` | Saved tickers with forecast summary (localStorage) |
+| `/ticker/[symbol]?tab=overview` | Per-ticker detail with 6 tabs: Forecast, Overview, Income Statement, Balance Sheet, Cash Flow, Key Ratios |
+| `/api/forecast?ticker=...&jitter=1` | JSON endpoint; `jitter=1` perturbs values ±0.5% to preview live-update behavior |
+
 ## Stack
 
-- **Next.js 16** (App Router) + **TypeScript**
+- **Next.js 16** (App Router) + **TypeScript** (strict)
 - **Chart.js** via `react-chartjs-2`
 - Handwritten CSS (no Tailwind) — see `app/globals.css`
-- Hosting target: **Vercel**
-- Future: **Clerk** (auth), **Stripe** (subscriptions), **Neon Postgres** + **Drizzle** (data), **Upstash QStash** (cron)
+- **Hosting:** Vercel
+- **Coming in Phase 2:** Clerk (auth), Stripe (subscriptions)
+- **Coming in Phase 3:** Neon Postgres + Drizzle ORM, Upstash QStash (cron)
 
 ## Run locally
 
@@ -41,28 +56,53 @@ That's it — no `.env` file, no API keys, no database needed in Phase 1. All da
 
 ```
 macrolens/
-├── app/                       Next.js App Router
-│   ├── layout.tsx             root layout (fonts + sidebar)
-│   ├── page.tsx               homepage (hero + dashboard preview)
-│   ├── globals.css            ALL styles
-│   ├── macro/                 Macro Dashboard
-│   ├── screener/              Ticker screener with filters
-│   ├── forecast/              Single-ticker forecast view
-│   ├── comparison/            Side-by-side comparison
-│   ├── portfolio/             Holdings tracker (localStorage)
-│   ├── watchlist/             Saved tickers (localStorage)
-│   └── ticker/[symbol]/       Per-ticker detail (financials, charts, ratios)
-├── components/                React components (Sidebar, charts, etc.)
+├── app/                                 Next.js App Router
+│   ├── layout.tsx                       Root layout (fonts + sidebar shell)
+│   ├── globals.css                      All styles (~2000 lines)
+│   ├── page.tsx                         Homepage
+│   ├── macro/page.tsx                   Macro Dashboard
+│   ├── screener/page.tsx                Filterable ticker table
+│   ├── forecast/page.tsx                Single-ticker forecast (?ticker=)
+│   ├── comparison/page.tsx              Multi-ticker comparison (?tickers=)
+│   ├── portfolio/page.tsx               Holdings tracker (localStorage)
+│   ├── watchlist/page.tsx               Saved tickers (localStorage)
+│   ├── ticker/[symbol]/
+│   │   ├── page.tsx                     Per-ticker detail (?tab=)
+│   │   └── _tabs/                       Tab content (private — not routable)
+│   │       ├── Forecast.tsx
+│   │       ├── Overview.tsx
+│   │       ├── Income.tsx
+│   │       ├── Balance.tsx
+│   │       ├── CashFlow.tsx
+│   │       └── Ratios.tsx
+│   └── api/
+│       └── forecast/route.ts            GET /api/forecast?ticker=...&jitter=1
+├── components/
+│   ├── Sidebar.tsx                      Collapsible sidebar (client)
+│   ├── ScreenerFilters.tsx              Filter inputs that update URL (client)
+│   ├── WatchlistStar.tsx                Star toggle button (client)
+│   ├── WatchlistList.tsx                Watchlist content (client)
+│   ├── PortfolioList.tsx                Portfolio form + cards (client)
+│   ├── ValuationBand.tsx                Pure CSS band (server)
+│   └── charts/
+│       ├── RevenueChart.tsx             Single-ticker bar+line
+│       ├── FinancialChart.tsx           Generic bar/line/mixed wrapper
+│       ├── ComparisonCharts.tsx         Multi-ticker line + grouped bar
+│       └── PortfolioCharts.tsx          Donut + P&L bar + YoY bar
 ├── lib/
-│   ├── types.ts               ForecastPayload, FinancialsPayload, Indicator
-│   ├── data.ts                Mock data — replaced by DB in Phase 3
-│   └── helpers.ts             fmt, pct, yc, alb, cb, sb
+│   ├── types.ts                         ForecastPayload, FinancialsPayload, etc.
+│   ├── data.ts                          Barrel re-export
+│   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (20 total)
+│   ├── financials.ts                    FINANCIALS for 5 tickers
+│   ├── indicators.ts                    INDS, REGIMES, group icons/colors
+│   ├── helpers.ts                       fmt, pct, yc, alb, cb, sb
+│   └── store.ts                         SSR-safe localStorage helpers
 └── docs/
-    ├── PLAN.md                Phased build order + status. Read first.
-    ├── CONTRACT.md            Backend JSON shape (locked in)
-    ├── ARCHITECTURE.md        Directory + design decisions
+    ├── PLAN.md                          Phased build order + status. Read first.
+    ├── CONTRACT.md                      Backend JSON shape (locked in)
+    ├── ARCHITECTURE.md                  Directory + design decisions
     └── reference/
-        └── original-design.html   Reference design from initial sketch
+        └── original-design.html         Design reference (read-only)
 ```
 
 ## The data contract
@@ -73,10 +113,10 @@ If you're working on the Python forecasting side: produce JSON matching that con
 
 ## Roadmap
 
-- **Phase 1 (in progress):** All pages working with mock data.
-- **Phase 2:** Clerk auth + Stripe paywall.
-- **Phase 3:** Neon Postgres + hourly cron writes fresh forecasts.
-- **Phase 4:** Real Python forecast service feeds the cron, custom domain, launch.
+- ✅ **Phase 1 — Dashboard:** All pages working with mock data. Done.
+- ⬜ **Phase 2 — Auth + Paywall:** Clerk login + Stripe subscriptions.
+- ⬜ **Phase 3 — DB + Cron:** Neon Postgres + hourly cron writes fresh forecasts.
+- ⬜ **Phase 4 — Real Model + Launch:** Python forecast service feeds the cron, custom domain, live mode.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the full task list.
 
@@ -88,3 +128,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full task list.
 | `npm run build` | Production build (catches type errors)   |
 | `npm run start` | Run the production build                 |
 | `npm run lint`  | ESLint check                             |
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

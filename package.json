@@ -2,11 +2,17 @@
   "name": "macrolens",
   "version": "0.1.0",
   "private": true,
+  "description": "MacroLens — revenue forecasting dashboard driven by macro signals (Next.js + TypeScript).",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

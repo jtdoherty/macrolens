@@ -10,7 +10,7 @@ Phase 1 ships the dashboard with mock data and no auth/payment. Later phases add
 
 ## Stack (locked in)
 
-- **Framework:** Next.js 15 (App Router) + TypeScript
+- **Framework:** Next.js 16 (App Router) + TypeScript
 - **Styling:** handwritten CSS (preserved from the reference design — no Tailwind)
 - **Charts:** Chart.js via `react-chartjs-2`
 - **Hosting:** Vercel
@@ -25,11 +25,12 @@ Phase 1 ships the dashboard with mock data and no auth/payment. Later phases add
 ```
 [User]
   → Next.js app on Vercel
-       → app/(marketing)/page.tsx        (public landing)
-       → app/(dashboard)/...              (authenticated, paywalled in Phase 2)
-       → app/api/forecast/route.ts        (returns ticker forecast JSON)
-       → app/api/refresh/route.ts         (cron target — Phase 3)
-       → app/api/stripe/webhook/route.ts  (Phase 2)
+       → app/page.tsx                     (homepage — public in Phase 2)
+       → app/{macro,screener,forecast,…}  (gated by Clerk + subscription in Phase 2)
+       → app/ticker/[symbol]/page.tsx     (per-ticker detail with 6 tabs)
+       → app/api/forecast/route.ts        (returns ticker JSON; gated in Phase 2)
+       → app/api/refresh/route.ts         (Phase 3 cron target)
+       → app/api/stripe/{checkout,webhook}/route.ts  (Phase 2)
 
 [Database — Phase 3 only]
   Postgres on Neon
@@ -40,6 +41,11 @@ Phase 1 ships the dashboard with mock data and no auth/payment. Later phases add
   Friend's Python service: produces JSON matching ForecastPayload type
   → cron route fetches and writes to forecasts table
 ```
+
+Note: We did NOT use the `app/(dashboard)/` route group originally planned. The sidebar
+lives in the root layout because Phase 1 has no public-vs-gated split. When Phase 2 lands,
+we'll move dashboard pages under `app/(dashboard)/` with their own layout, leaving `/` and
+`/pricing` outside the group as public routes.
 
 ## Data contract
 
@@ -75,7 +81,7 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
 - [x] 1.17c `components/charts/FinancialChart.tsx` — single generic wrapper for all bar/line/mixed financial charts (replaces 6+ specialized components). Handles diverging colors, dollar/percent/ratio formats, line-on-bar overlays.
 - [x] 1.18 Add `app/api/forecast/route.ts` — GET with `?ticker=`, `?extended=1`, `?jitter=1` query params. Cache-Control set per request type.
 - [x] 1.19 Jitter built into the API route (`?jitter=1`). When enabled, forecast_revenue_yoy / forecast_revenue / anchor_yoy / macro_only / current_price get ±0.5% perturbation per request.
-- [ ] 1.20 Smoke-test in browser: walk every page, every tab, every filter combination. (User-facing verification step, not a code change.)
+- [x] 1.20 Smoke-test in browser: walk every page, every tab, every filter combination. **Confirmed passing 2026-05-09.**
 
 ### Phase 2 — Auth + paywall
 
@@ -133,10 +139,14 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 1 is structurally COMPLETE.** All 8 dashboard pages render real content. Ticker Detail has 6 working tabs over `FINANCIALS`. The API route is up at `/api/forecast` with optional `?jitter=1` for ±0.5% perturbation. Build is clean: 4 static + 6 dynamic routes.
+Last updated: 2026-05-09. **Phase 1 is COMPLETE — all 20 steps checked off, smoke-test passed.** The dashboard works end-to-end with mock data. Ready to deploy to Vercel as-is, or move straight into Phase 2.
 
-The only remaining Phase 1 task is **1.20 — manual smoke-test in the browser**. The user should walk every page, click every tab, hit every filter combination, and confirm visual fidelity to the reference design. Anything that's broken or visually off becomes a small follow-up commit.
+**Next session = Phase 2 step 2.1.** Before that step, the user needs to:
+1. Sign up at [clerk.com](https://clerk.com) (free tier is generous)
+2. Create a new application — pick email + Google auth providers
+3. Copy the **Publishable key** (`pk_test_...`) and **Secret key** (`sk_test_...`) from the API Keys page
+4. Have those keys ready — we'll add them to `.env.local` and to Vercel env vars
 
-After 1.20, we move to **Phase 2 — Auth + paywall** (Clerk + Stripe). See the Phase 2 section below for the step-by-step. The first action is signing up at clerk.com and grabbing the publishable + secret keys.
+Stripe (steps 2.5+) doesn't need pre-work yet — we'll get to it after Clerk is wired up.
 
-Resume by reading the unchecked boxes above, top-down.
+Resume by reading the Phase 2 unchecked boxes below, top-down.
