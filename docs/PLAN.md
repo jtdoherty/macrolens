@@ -53,24 +53,26 @@ Goal: a working multi-page Next.js app on `localhost:3000` that visually matches
 
 - [x] 1.1 Preserve friend's `index.html` as `docs/reference/original-design.html`
 - [x] 1.2 Scaffold Next.js (TS, App Router, ESLint, no Tailwind)
-- [ ] 1.3 Install Chart.js + react-chartjs-2
-- [ ] 1.4 Write `lib/types.ts` — `ForecastPayload`, `FinancialsPayload`, `Indicator`, `Holding`
-- [ ] 1.5 Write `lib/data.ts` — extract `PL`, `PL_EXTENDED`, `FINANCIALS`, `INDS` from reference HTML
-- [ ] 1.6 Write `lib/helpers.ts` — `fmt`, `pct`, `yc`, `alb`, `cb`, `sb`
-- [ ] 1.7 Move global CSS into `app/globals.css` verbatim
-- [ ] 1.8 Build app shell:
-  - [ ] `app/layout.tsx` — fonts + globals
-  - [ ] `app/(dashboard)/layout.tsx` — sidebar + main area
-  - [ ] `components/Sidebar.tsx` — navigation with `Link`, collapse state
-- [ ] 1.9 Port homepage at `app/page.tsx` (hero + summary stats + best/worst + macro flash + all-tickers table)
-- [ ] 1.10 Port `app/(dashboard)/macro/page.tsx` — Macro Dashboard
-- [ ] 1.11 Port `app/(dashboard)/screener/page.tsx` — table with filters/sort
-- [ ] 1.12 Port `app/(dashboard)/forecast/page.tsx` — single-ticker forecast view
-- [ ] 1.13 Port `app/(dashboard)/comparison/page.tsx` — side-by-side comparison
-- [ ] 1.14 Port `app/(dashboard)/portfolio/page.tsx` — localStorage holdings
-- [ ] 1.15 Port `app/(dashboard)/watchlist/page.tsx` — localStorage tickers
-- [ ] 1.16 Port `app/(dashboard)/ticker/[symbol]/page.tsx` — per-ticker detail with tabs
-- [ ] 1.17 Build shared chart components: `RevenueChart`, `ValuationBand`, ratio/financial chart wrappers
+- [x] 1.3 Install Chart.js + react-chartjs-2
+- [x] 1.4 Write `lib/types.ts` — `ForecastPayload`, `FinancialsPayload`, `Indicator`, `Holding`
+- [x] 1.5 Write `lib/data.ts` — split into `lib/forecasts.ts` (PL + PL_EXTENDED, 20 tickers), `lib/financials.ts` (FINANCIALS, 5 tickers), `lib/indicators.ts` (INDS + REGIMES). Barrel export from `lib/data.ts`.
+- [x] 1.6 Write `lib/helpers.ts` — `fmt`, `pct`, `yc`, `alb`, `cb`, `sb`
+- [x] 1.7 Move global CSS into `app/globals.css` verbatim
+- [x] 1.8 Build app shell:
+  - [x] `app/layout.tsx` — fonts + globals
+  - [x] sidebar in root layout (no separate dashboard route group in v1; landing page also has sidebar)
+  - [x] `components/Sidebar.tsx` — navigation with `Link`, collapse state
+- [x] 1.9 Port homepage at `app/page.tsx` (hero + summary stats + best/worst + macro flash + all-tickers table)
+- [x] 1.10 Port `app/macro/page.tsx` — Macro Dashboard (regime hero, 6 chips, ticker heatmap, 6 indicator group cards)
+- [ ] 1.11 Port `app/screener/page.tsx` — table with filters/sort over PL_EXTENDED
+- [ ] 1.12 Port `app/forecast/page.tsx` — single-ticker forecast view
+- [ ] 1.13 Port `app/comparison/page.tsx` — side-by-side comparison
+- [ ] 1.14 Port `app/portfolio/page.tsx` — localStorage holdings
+- [ ] 1.15 Port `app/watchlist/page.tsx` — localStorage tickers
+- [ ] 1.16 Port `app/ticker/[symbol]/page.tsx` — per-ticker detail with tabs (Forecast / Overview / Income / Balance / Cash Flow / Ratios)
+- [x] 1.17a `components/charts/RevenueChart.tsx` — bar (actuals) + line overlays (macro-adj forecast + anchor)
+- [x] 1.17b `components/ValuationBand.tsx` — pure CSS band with bear/base/bull markers + price pin
+- [ ] 1.17c Ratio/financial chart wrappers for the Ticker Detail page
 - [ ] 1.18 Add `app/api/forecast/route.ts` returning mock data (frontend fetches via this instead of importing directly)
 - [ ] 1.19 Add a 1-hour cron-jitter refresh: every fetch slightly perturbs numbers (±0.5%) so dashboard visibly "updates"
 - [ ] 1.20 Verify everything runs locally and looks correct
@@ -131,6 +133,8 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Currently executing Phase 1 setup** — through 1.2 done, now installing Chart.js and writing the foundational `lib/` files. After this, the homepage gets ported.
+Last updated: 2026-05-09. **Phase 1 step 1.10 complete + chart foundation built.** Homepage, sidebar, Macro Dashboard, all 20 tickers + 5 financial statement sets, RevenueChart, and ValuationBand are all done. The dev build is clean.
+
+Next session: pick up at **1.12 (Forecast View)** — it's the heaviest remaining page and exercises both chart components in anger. After that, 1.11 Screener (over PL_EXTENDED), then 1.16 Ticker Detail (uses FINANCIALS), then the smaller pages 1.13–1.15. Finish Phase 1 with 1.18–1.20.
 
 Resume by reading the unchecked boxes above, top-down.
