@@ -91,12 +91,12 @@ Goal: marketing landing stays public, dashboard requires Clerk login + active St
 - [x] 2.2 Add `app/(auth)/sign-in/[[...sign-in]]/page.tsx` and `app/(auth)/sign-up/[[...sign-up]]/page.tsx` mounting `<SignIn />` / `<SignUp />`.
 - [x] 2.3 Add `proxy.ts` at project root (Next.js 16 renamed `middleware.ts` → `proxy.ts`) using `clerkMiddleware()` + `createRouteMatcher`. Gates everything except `/sign-in/*`, `/sign-up/*`, and `/api/forecast` (last one stays open until 2.10).
 - [x] 2.4 Add Clerk's `<UserButton />` to the sidebar footer. Reorganized routes into `app/(dashboard)/` (sidebar layout) and `app/(auth)/` (centered card on dark gradient) route groups.
-- [ ] 2.5 Sign up for Stripe (test mode), create one Product + monthly Price
-- [ ] 2.6 Add `app/api/stripe/checkout/route.ts` — creates a Checkout Session
-- [ ] 2.7 Add `app/api/stripe/webhook/route.ts` — handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-- [ ] 2.8 Add `/pricing` page with the subscribe button → Checkout
-- [ ] 2.9 Add 7-day free trial to the Price (no credit card up-front via Clerk's signup, then Checkout when ready to subscribe)
-- [ ] 2.10 Gate `/api/forecast` to return 402 if no active subscription, then remove from `proxy.ts` public matcher
+- [x] 2.5 Sign up for Stripe (test mode), created `MacroLens Pro` product at $1/mo (price id `price_1TVGpc...`). `npm install stripe`. Keys + price id in `.env.local`.
+- [x] 2.6 `app/api/stripe/checkout/route.ts` — creates Checkout Session via form POST, redirects to Stripe-hosted page
+- [x] 2.7 `app/api/stripe/webhook/route.ts` — verifies signature, handles `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, writes status to Clerk `publicMetadata`. **Local dev:** install Stripe CLI and run `stripe listen --forward-to localhost:3000/api/stripe/webhook` to get the `whsec_…` value for `STRIPE_WEBHOOK_SECRET`.
+- [x] 2.8 `app/(dashboard)/pricing/page.tsx` — feature list, $/mo, "Start 7-day free trial" form button. Detects already-subscribed users and shows "Open Dashboard" instead.
+- [x] 2.9 7-day free trial baked into Checkout Session config (`subscription_data.trial_period_days: 7`). No card declined messaging — Stripe collects card up-front but doesn't charge until day 8.
+- [x] 2.10 `/api/forecast` is now subscription-gated by `proxy.ts`. Middleware returns JSON 402 for `/api/*` routes and redirects pages to `/pricing`. Subscription state read from Clerk `publicMetadata`. Bonus: `app/api/stripe/post-checkout/route.ts` writes metadata synchronously after successful Checkout (avoids webhook-arrival race).
 
 ### Phase 3 — Database + real cron
 
@@ -139,26 +139,27 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 2 part 1 (Clerk auth) is DONE — steps 2.1–2.4.** The app now requires sign-in. Visiting any route while signed out redirects to `/sign-in`. After sign-up/sign-in, the user lands on `/` with the sidebar + UserButton in the footer. Build / lint / typecheck all clean.
+Last updated: 2026-05-09. **Phase 2 is COMPLETE — all 10 steps checked off.** Auth + paywall fully wired. New visitors must sign in (Clerk) AND have an active subscription (Stripe) to see dashboard pages. The `/api/forecast` endpoint returns 402 to non-subscribers.
 
-**Smoke-test step before continuing:**
-1. `npm run dev`
-2. Visit `http://localhost:3000` — should redirect to `/sign-in`
-3. Click "Sign up", create an account (use a real email — Clerk verifies)
-4. After sign-up, you should land on `/` with the dashboard
-5. Click your avatar in the sidebar footer — Clerk's UserButton menu should open
-6. Sign out, verify it kicks you back to `/sign-in`
+**Required smoke-test before claiming Phase 2 done:**
 
-**Next session = Phase 2 step 2.5 (Stripe).** Before that step, the user needs to:
-1. Sign up at [stripe.com](https://stripe.com) — start in **Test mode** (toggle top-left)
-2. From the Dashboard → Developers → API keys, grab:
-   - **Publishable key** (`pk_test_...`)
-   - **Secret key** (`sk_test_...`)
-3. Create a Product:
-   - Dashboard → Product catalog → Add product
-   - Name: `MacroLens Pro` (or similar)
-   - Pricing: **Recurring**, monthly, pick a price (e.g. $19/month)
-   - Save — note the resulting **Price ID** (`price_...`)
-4. Have the publishable key, secret key, and price ID ready
+1. **Webhook secret first.** Install [Stripe CLI](https://stripe.com/docs/stripe-cli) (or skip if you've already got one set up). Then in a separate terminal:
+   ```
+   stripe login
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+   It prints `Ready! Your webhook signing secret is whsec_…`. Copy that value into `.env.local` as `STRIPE_WEBHOOK_SECRET=whsec_…` and restart `npm run dev`. Keep `stripe listen` running while you test.
 
-Resume by reading the Phase 2 unchecked boxes below, top-down (start at 2.5).
+2. `npm run dev` and visit `http://localhost:3000`.
+   - Already signed in (from Phase 2 part 1)? Should redirect to `/pricing` (you don't have a subscription yet).
+   - Click "Start 7-day free trial".
+   - Stripe-hosted Checkout opens. Use test card `4242 4242 4242 4242`, any future expiry, any CVC, any zip.
+   - After payment, you redirect to `/?subscribed=1` — dashboard loads.
+3. Sign out, sign back in, confirm you land on the dashboard (not /pricing).
+4. Try `curl http://localhost:3000/api/forecast` (without cookies) — should be 401 / redirect to sign-in.
+
+**Next session = Phase 3 (DB + cron).** Before then:
+1. Sign up at [neon.tech](https://neon.tech), create a project, copy the connection string (`DATABASE_URL`).
+2. Sign up at [upstash.com](https://upstash.com) for QStash (cron triggers), grab the QStash token + signing keys. (Optional — we can also use Vercel Cron once you're on Pro.)
+
+Resume by reading the Phase 3 unchecked boxes below.
