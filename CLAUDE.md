@@ -25,28 +25,34 @@ Revenue forecasting dashboard. Connects FRED macro indicators to company quarter
 - **TypeScript is strict.** Run `npm run build` to catch errors before committing.
 - **Path alias `@/*`** points to project root (`@/lib/data`, `@/components/Sidebar`).
 
-## Data flow
+## Data flow (Phase 3, live)
 
+Forecasts:
 ```
-lib/data.ts (mock TS const)
-   ↓
-app/api/forecast/route.ts (Phase 1.18; Phase 3 reads from DB)
-   ↓
-client component fetches → renders chart/table
+Vercel Cron (daily, 10:00 UTC) → /api/refresh → upsertMockForecasts({ jitter: true }) → Neon forecasts table
+Dashboard pages → lib/forecast-store.ts → Neon (fallback to PL/PL_EXTENDED mock if DB unset/empty)
 ```
 
-In Phase 1 it's also fine for server components to import `lib/data.ts` directly — no auth gating yet. When Phase 2 lands, dashboard pages must go through the API route so the subscription check applies.
+Subscriptions:
+```
+Stripe Checkout success → /api/stripe/post-checkout → setUserSubscription → BOTH Neon subscriptions + Clerk publicMetadata
+Stripe webhook events  → /api/stripe/webhook       → setUserSubscription → same double-write
+proxy.ts (edge)        → reads Clerk publicMetadata (no Postgres from edge)
+/api/forecast route    → reads Neon directly (authoritative)
+```
+
+The double-write is intentional: middleware needs to be fast, but the DB is the source of truth. `setUserSubscription` in `lib/subscription.ts` is the only function that mutates this state.
 
 ## State persistence
 
-| State              | Storage                          | Notes                                  |
-|--------------------|----------------------------------|----------------------------------------|
-| Sidebar collapsed  | localStorage (`ml_sb_collapsed`) | UI state, never moves to DB            |
-| Watchlist          | localStorage (`ml_wl`)           | Promote to DB later if cross-device    |
-| Portfolio          | localStorage (`ml_port`)         | Promote to DB later if cross-device    |
-| Subscription state | DB (Phase 3)                     | Written by Stripe webhook              |
-| Forecast data      | mock const → DB (Phase 3)        | Written by hourly cron                 |
-| User profile       | Clerk (Phase 2)                  | Don't duplicate into our DB            |
+| State              | Storage                                | Notes                                                                 |
+|--------------------|----------------------------------------|-----------------------------------------------------------------------|
+| Sidebar collapsed  | localStorage (`ml_sb_collapsed`)       | UI state, never moves to DB                                           |
+| Watchlist          | localStorage (`ml_wl`)                 | Promote to DB later if cross-device sync is needed                    |
+| Portfolio          | localStorage (`ml_port`)               | Promote to DB later if cross-device sync is needed                    |
+| Subscription state | Neon `subscriptions` + Clerk mirror    | DB is source of truth; Clerk metadata mirror keeps middleware fast    |
+| Forecast data      | Neon `forecasts` (jsonb) + mock fallback | Daily cron writes; mock fallback keeps local dev usable without DB    |
+| User profile       | Clerk                                  | Don't duplicate into our DB                                           |
 
 ## What NOT to do
 
@@ -55,16 +61,20 @@ In Phase 1 it's also fine for server components to import `lib/data.ts` directly
 - **Don't bring back the friend's localStorage auth screen.** Clerk replaces it in Phase 2.
 - **Don't add fields to `ForecastPayload` casually.** Update `docs/CONTRACT.md` in the same commit and explain why.
 - **Don't introduce Tailwind, CSS-in-JS, or another styling system.**
-- **Don't pre-build Phase 2/3 features into Phase 1.** The plan is intentionally phased.
+- **Don't write subscription state directly to Clerk metadata or directly to the DB.** Always go through `setUserSubscription` in `lib/subscription.ts` so both stay in sync.
+- **Don't add fields to `ForecastPayload` without also updating `docs/CONTRACT.md` and re-running the mock data through `/api/refresh`.** The DB jsonb is typed against `ForecastPayload`; drifting the type breaks reads.
 - **Don't read localStorage with `useEffect(() => setState(...), [])`.** That's a `react-hooks/set-state-in-effect` lint error in React 19. Use the `useWatchlist()` / `usePortfolio()` / `useSidebarCollapsed()` hooks from `lib/store.ts` — they wrap `useSyncExternalStore` correctly with cached snapshots and cross-tab sync.
 - **Don't use `<link>` tags for Google Fonts.** Use `next/font/google` (see `app/layout.tsx`) for proper self-hosting and zero layout shift.
 
 ## Commands
 
 ```bash
-npm run dev      # dev server with HMR
-npm run build    # production build, catches type errors
-npm run lint     # ESLint
+npm run dev          # dev server with HMR
+npm run build        # production build, catches type errors
+npm run lint         # ESLint
+npm run typecheck    # tsc --noEmit
+npm run db:generate  # drizzle-kit generate (after schema changes)
+npm run db:migrate   # drizzle-kit migrate (apply pending migrations)
 ```
 
 ## Updating the plan

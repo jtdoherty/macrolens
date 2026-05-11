@@ -5,12 +5,12 @@ import { getUserSubscription, isActiveStatus } from '@/lib/subscription';
 
 // GET /api/forecast?ticker=AAPL[&jitter=1][&extended=1]
 //
-// Phase 3 reads from Postgres when DATABASE_URL is configured and rows exist.
+// Reads from Postgres when DATABASE_URL is configured and rows exist.
 // Local development without a DB falls back to the in-memory mock data.
 //
-// jitter=1 applies a ±0.5% deterministic-per-call perturbation so the dashboard
-// visibly "updates" when refreshed — placeholder for the eventual hourly cron
-// that will write fresh forecasts (Phase 3 step 1.19).
+// jitter=1 applies a ±0.5% per-call perturbation so the dashboard visibly
+// changes between refreshes. The daily Vercel Cron (vercel.json) hits
+// /api/refresh and writes fresh jittered forecasts to the DB.
 
 export async function GET(request: Request) {
   const { userId } = await auth();

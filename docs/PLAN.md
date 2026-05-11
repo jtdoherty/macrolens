@@ -103,15 +103,15 @@ Goal: marketing landing stays public, dashboard requires Clerk login + active St
 Goal: subscription state lives in Postgres, cron writes fresh mock data every hour.
 
 - [x] 3.1 Sign up for Neon, create project, paste `DATABASE_URL` into local env
-- [ ] 3.1b Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `CRON_SECRET` to Vercel env
+- [x] 3.1b Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `CRON_SECRET` to Vercel env
 - [x] 3.2 `npm install drizzle-orm drizzle-kit pg`
 - [x] 3.3 Define schema in `db/schema.ts`: `subscriptions`, `forecasts`
 - [x] 3.4 Run initial migration
-- [x] 3.5 Update Stripe webhook to write to `subscriptions` table
+- [x] 3.5 Update Stripe webhook to write to `subscriptions` table (code merged; awaits first prod event to populate the table)
 - [x] 3.6 Update `/api/forecast` to check `subscriptions` and read from `forecasts` table
 - [x] 3.7 Add Vercel Cron schedule hitting `/api/refresh` daily
 - [x] 3.8 `app/api/refresh/route.ts` — recompute mock forecasts (jitter), write to DB
-- [ ] 3.9 Verify Vercel Cron fires daily and DB updates
+- [ ] 3.9 Verify Vercel Cron fires daily and DB updates (passive — check after first 10:00 UTC firing)
 
 ### Phase 4 — Real backend, polish, launch
 
@@ -140,12 +140,18 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 3 is in progress.** Neon is created, Drizzle migrations have been applied, and the `forecasts` table has been seeded with 20 mock forecast payloads. DB-backed subscription helpers, `/api/forecast` DB reads, and `/api/refresh` mock forecast refresh are wired. Forecast-backed dashboard pages are dynamic and read through `lib/forecast-store.ts`, which falls back to mock data when `DATABASE_URL` is not configured or the DB is empty.
+Last updated: 2026-05-11. **Phase 3 is essentially complete.** Production is live at https://macrolens-six.vercel.app/.
 
-**Next required steps:**
+Verified in production:
+- Vercel build green, all env vars set for Production
+- Daily cron registered (Vercel → Settings → Cron Jobs shows `0 10 * * *` → `/api/refresh`)
+- `/api/refresh` end-to-end: returns 401 without bearer, 200 with bearer, writes 20 rows to Neon (confirmed `forecasts.updated_at` advances)
+- `/api/forecast` gated by Clerk middleware in production
+- Existing Phase 2 Stripe subscriptions still work (Clerk metadata mirror keeps proxy fast)
 
-1. Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `CRON_SECRET` to Vercel project env vars for Production.
-2. Deploy the current code so Vercel creates the daily cron from `vercel.json`.
-3. Check Vercel → Settings → Cron Jobs and verify `/api/refresh` is listed.
-4. Smoke-test signup/subscription again, then verify `/api/forecast` returns 402 for an unsubscribed signed-in user and forecast JSON for an active/trialing user.
-5. After the first scheduled run, verify `forecasts.updated_at` changes in Neon.
+Loose ends:
+- 3.5 — Stripe webhook code writes to both DB and Clerk metadata, but `subscriptions` table is still empty in prod (existing subscribers were created in Phase 2 via local `stripe listen`). First production webhook event will populate it. Verify with a test event from Stripe Dashboard → Webhooks → Send test event, OR a fresh real checkout.
+- 3.9 — Cron-fire verification is passive; check `forecasts.updated_at` after the first 10:00 UTC run, or Vercel → Logs filtered to `/api/refresh`.
+- **Security:** Neon DB password was pasted in chat during the Codex session. Rotate it: Neon Console → Roles → Reset password, then update `DATABASE_URL` / `DATABASE_URL_UNPOOLED` in both `.env.local` and Vercel, then redeploy.
+
+Operational handoff: see `docs/OPERATIONS.md` for the day-to-day monitoring runbook.

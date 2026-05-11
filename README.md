@@ -2,7 +2,7 @@
 
 Revenue forecasting dashboard driven by macro signals. Connects FRED macro indicators to company quarterly revenue using walk-forward validated models, exposing anchor forecasts, macro signals, and adaptive blends with valuation bands per ticker.
 
-> **Status:** Phase 3 in progress — dashboard, Clerk auth, Stripe paywall, Drizzle schema, and DB-backed forecast/subscription routes are wired. Neon migration and QStash schedule setup are next. See [`docs/PLAN.md`](docs/PLAN.md).
+> **Status:** Live in production at [macrolens-six.vercel.app](https://macrolens-six.vercel.app/). Phase 3 (Neon Postgres + Vercel Cron) complete. Phase 4 (real Python forecast service + custom domain + Stripe live mode) is next. See [`docs/PLAN.md`](docs/PLAN.md). For day-to-day monitoring, see [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ## What it does
 
@@ -14,7 +14,7 @@ For each tracked ticker, the app shows three independent next-quarter revenue es
 
 Plus a valuation band (bear / base / bull, with trustworthiness-adjusted variants), walk-forward MAE and R², and the selected macro drivers for transparency.
 
-## Features (Phase 1)
+## Features
 
 | Page | What it does |
 |------|--------------|
@@ -34,8 +34,9 @@ Plus a valuation band (bear / base / bull, with trustworthiness-adjusted variant
 - **Chart.js** via `react-chartjs-2`
 - Handwritten CSS (no Tailwind) — see `app/globals.css`
 - **Hosting:** Vercel
-- **Auth/payments:** Clerk, Stripe subscriptions
-- **Phase 3 in progress:** Neon Postgres + Drizzle ORM, Vercel Cron
+- **Auth/payments:** Clerk + Stripe Checkout subscriptions ($1/mo, 7-day trial)
+- **DB:** Neon Postgres + Drizzle ORM (forecasts + subscriptions tables)
+- **Cron:** Vercel Cron, daily at 10:00 UTC → `/api/refresh`
 
 ## Run locally
 
@@ -54,61 +55,18 @@ For dashboard-only local exploration, forecast pages fall back to mock data when
 
 ## Project layout
 
-```
-macrolens/
-├── app/                                 Next.js App Router
-│   ├── layout.tsx                       Root layout (fonts + sidebar shell)
-│   ├── globals.css                      All styles (~2000 lines)
-│   ├── page.tsx                         Homepage
-│   ├── macro/page.tsx                   Macro Dashboard
-│   ├── screener/page.tsx                Filterable ticker table
-│   ├── forecast/page.tsx                Single-ticker forecast (?ticker=)
-│   ├── comparison/page.tsx              Multi-ticker comparison (?tickers=)
-│   ├── portfolio/page.tsx               Holdings tracker (localStorage)
-│   ├── watchlist/page.tsx               Saved tickers (localStorage)
-│   ├── ticker/[symbol]/
-│   │   ├── page.tsx                     Per-ticker detail (?tab=)
-│   │   └── _tabs/                       Tab content (private — not routable)
-│   │       ├── Forecast.tsx
-│   │       ├── Overview.tsx
-│   │       ├── Income.tsx
-│   │       ├── Balance.tsx
-│   │       ├── CashFlow.tsx
-│   │       └── Ratios.tsx
-│   └── api/
-│       └── forecast/route.ts            GET /api/forecast?ticker=...&jitter=1
-├── components/
-│   ├── Sidebar.tsx                      Collapsible sidebar (client)
-│   ├── ScreenerFilters.tsx              Filter inputs that update URL (client)
-│   ├── WatchlistStar.tsx                Star toggle button (client)
-│   ├── WatchlistList.tsx                Watchlist content (client)
-│   ├── PortfolioList.tsx                Portfolio form + cards (client)
-│   ├── ValuationBand.tsx                Pure CSS band (server)
-│   └── charts/
-│       ├── RevenueChart.tsx             Single-ticker bar+line
-│       ├── FinancialChart.tsx           Generic bar/line/mixed wrapper
-│       ├── ComparisonCharts.tsx         Multi-ticker line + grouped bar
-│       └── PortfolioCharts.tsx          Donut + P&L bar + YoY bar
-├── lib/
-│   ├── types.ts                         ForecastPayload, FinancialsPayload, etc.
-│   ├── data.ts                          Barrel re-export
-│   ├── forecast-store.ts                DB-backed forecast reads + mock fallback
-│   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (20 total)
-│   ├── financials.ts                    FINANCIALS for 5 tickers
-│   ├── indicators.ts                    INDS, REGIMES, group icons/colors
-│   ├── helpers.ts                       fmt, pct, yc, alb, cb, sb
-│   └── store.ts                         SSR-safe localStorage helpers
-├── db/
-│   ├── schema.ts                        Drizzle schema: subscriptions, forecasts
-│   ├── client.ts                        Postgres pool + Drizzle client
-│   └── migrations/                      Generated SQL migrations
-└── docs/
-    ├── PLAN.md                          Phased build order + status. Read first.
-    ├── CONTRACT.md                      Backend JSON shape (locked in)
-    ├── ARCHITECTURE.md                  Directory + design decisions
-    └── reference/
-        └── original-design.html         Design reference (read-only)
-```
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full directory tree. Quick summary:
+
+- `app/(dashboard)/` — Clerk + subscription gated pages
+- `app/(auth)/` — Clerk-rendered sign-in / sign-up
+- `app/api/forecast/` — JSON endpoint, DB-backed, gated
+- `app/api/refresh/` — Vercel Cron target, gated by `CRON_SECRET`
+- `app/api/stripe/{checkout,post-checkout,webhook}/` — Stripe integration
+- `lib/forecast-store.ts` — DB-first forecast reads with mock fallback
+- `lib/subscription.ts` — DB-first subscription state, mirrored to Clerk
+- `db/` — Drizzle schema + generated migrations
+- `proxy.ts` — Clerk middleware (Next.js 16 renamed `middleware.ts` → `proxy.ts`)
+- `vercel.json` — daily cron schedule
 
 ## The data contract
 
@@ -118,10 +76,10 @@ If you're working on the Python forecasting side: produce JSON matching that con
 
 ## Roadmap
 
-- ✅ **Phase 1 — Dashboard:** All pages working with mock data. Done.
-- ✅ **Phase 2 — Auth + Paywall:** Clerk login + Stripe subscriptions.
-- 🟨 **Phase 3 — DB + Cron:** Drizzle/schema/routes wired; Neon migration and Vercel env setup remain.
-- ⬜ **Phase 4 — Real Model + Launch:** Python forecast service feeds the cron, custom domain, live mode.
+- ✅ **Phase 1 — Dashboard:** All pages working with mock data.
+- ✅ **Phase 2 — Auth + Paywall:** Clerk login + Stripe Checkout with 7-day trial.
+- ✅ **Phase 3 — DB + Cron:** Neon Postgres + Drizzle + daily Vercel Cron refresh. Subscription source of truth in DB, mirrored to Clerk metadata for fast middleware.
+- ⬜ **Phase 4 — Real Model + Launch:** Python forecast service feeds the cron, custom domain, Stripe live mode.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the full task list.
 

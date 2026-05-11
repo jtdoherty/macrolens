@@ -41,10 +41,10 @@ export default clerkMiddleware(async (auth, req) => {
   // Routes that only need auth, not subscription.
   if (isAuthOnlyRoute(req)) return;
 
-  // Subscription gate. Read publicMetadata via Clerk client. ~50ms per gated
-  // request — acceptable for Phase 2. If this becomes a bottleneck, we can
-  // promote subscriptionStatus into the session token via Clerk dashboard's
-  // session token customization (one-time setup, near-zero overhead per call).
+  // Subscription gate. Edge middleware can't reach Postgres, so we read the
+  // Clerk publicMetadata mirror that setUserSubscription keeps in sync with
+  // the DB. Route handlers (e.g. /api/forecast) re-check against the DB
+  // directly as the authoritative source.
   const { userId } = await auth();
   if (!userId) return; // auth.protect() already redirected
 

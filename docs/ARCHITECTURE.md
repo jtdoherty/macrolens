@@ -1,69 +1,64 @@
 # Architecture Notes
 
-## Directory layout (actual, as of Phase 3 in progress)
+## Directory layout (actual, Phase 3 complete)
 
 ```
 macrolens/
 ├── app/
-│   ├── layout.tsx                       Root layout: fonts, globals.css, sidebar shell
+│   ├── layout.tsx                       Root: <html>, <body>, ClerkProvider, fonts
 │   ├── globals.css                      All styles (~2000 lines, ported from reference HTML)
-│   ├── page.tsx                         Homepage (will become public landing in Phase 2)
-│   ├── macro/page.tsx                   Macro Dashboard (server component)
-│   ├── screener/page.tsx                Filterable table; reads searchParams
-│   ├── forecast/page.tsx                Single-ticker view; reads ?ticker=
-│   ├── comparison/page.tsx              Multi-ticker compare; reads ?tickers=
-│   ├── portfolio/page.tsx               Server shell + client list
-│   ├── watchlist/page.tsx               Server shell + client list
-│   ├── ticker/[symbol]/
-│   │   ├── page.tsx                     Hero + tabs nav + dispatch
-│   │   └── _tabs/                       Tab content (underscore = not routable)
-│   │       ├── Forecast.tsx
-│   │       ├── Overview.tsx
-│   │       ├── Income.tsx
-│   │       ├── Balance.tsx
-│   │       ├── CashFlow.tsx
-│   │       └── Ratios.tsx
+│   ├── (auth)/                          Route group — centered card on dark gradient
+│   │   ├── layout.tsx
+│   │   ├── sign-in/[[...sign-in]]/page.tsx
+│   │   └── sign-up/[[...sign-up]]/page.tsx
+│   ├── (dashboard)/                     Route group — sidebar shell, auth+subscription gated
+│   │   ├── layout.tsx                   Sidebar shell
+│   │   ├── page.tsx                     Homepage
+│   │   ├── pricing/page.tsx             Subscribe button (auth-only, no subscription required)
+│   │   ├── macro/page.tsx               Macro Dashboard
+│   │   ├── screener/page.tsx            Filterable table; reads searchParams
+│   │   ├── forecast/page.tsx            Single-ticker view; reads ?ticker=
+│   │   ├── comparison/page.tsx          Multi-ticker compare; reads ?tickers=
+│   │   ├── portfolio/page.tsx           Server shell + client list
+│   │   ├── watchlist/page.tsx           Server shell + client list
+│   │   └── ticker/[symbol]/
+│   │       ├── page.tsx                 Hero + tabs nav + dispatch
+│   │       └── _tabs/                   Tab content (underscore = not routable)
 │   └── api/
-│       └── forecast/route.ts            GET /api/forecast — supports ticker, extended, jitter
-├── components/
-│   ├── Sidebar.tsx                      'use client' — collapse state + active route
-│   ├── ScreenerFilters.tsx              'use client' — inputs that update URL via useRouter
-│   ├── WatchlistStar.tsx                'use client' — toggle star button
-│   ├── WatchlistList.tsx                'use client' — reads localStorage on mount
-│   ├── PortfolioList.tsx                'use client' — form, holdings, embedded charts
-│   ├── ValuationBand.tsx                Server — pure CSS band (no canvas)
-│   └── charts/
-│       ├── RevenueChart.tsx             'use client' — bar + line overlay (single ticker)
-│       ├── FinancialChart.tsx           'use client' — generic bar/line/mixed wrapper
-│       ├── ComparisonCharts.tsx         'use client' — multi-line + grouped bar
-│       └── PortfolioCharts.tsx          'use client' — donut + P&L bar + YoY bar
+│       ├── forecast/route.ts            GET — DB-backed, gated by Clerk+subscription
+│       ├── refresh/route.ts             GET/POST — Vercel Cron target, gated by CRON_SECRET
+│       └── stripe/
+│           ├── checkout/route.ts        POST — creates Stripe Checkout Session
+│           ├── post-checkout/route.ts   GET — landing after successful checkout
+│           └── webhook/route.ts         POST — receives Stripe events, writes subscriptions
+├── components/                          (Sidebar, charts, ValuationBand, etc.)
 ├── lib/
 │   ├── types.ts                         ForecastPayload, FinancialsPayload, Indicator, Holding
 │   ├── data.ts                          Barrel re-export of all mock data
 │   ├── forecast-store.ts                DB-backed forecast reads + mock fallback
-│   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (15 more, 20 total)
-│   ├── financials.ts                    FINANCIALS — 5y annual + 12q quarterly + ratios per ticker
+│   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (20 total)
+│   ├── financials.ts                    FINANCIALS — 5y annual + 12q quarterly per ticker
 │   ├── indicators.ts                    INDS, FLASH_INDS, REGIMES, GROUP_* maps
 │   ├── helpers.ts                       fmt, pct, yc, alb, cb, sb
-│   └── store.ts                         SSR-safe localStorage helpers (watchlist + portfolio)
-├── docs/
-│   ├── PLAN.md                          Phased build order with checkboxes + status
-│   ├── CONTRACT.md                      Backend JSON shape (locked in)
-│   ├── ARCHITECTURE.md                  This file
-│   └── reference/
-│       └── original-design.html         Friend's design (read-only reference)
-├── public/                              Static assets
+│   ├── store.ts                         SSR-safe localStorage hooks
+│   ├── stripe.ts                        Stripe client + price id
+│   ├── subscription.ts                  DB-first subscription read/write, Clerk mirror
+│   └── subscription-status.ts           Edge-safe types (no pg import)
 ├── db/
 │   ├── schema.ts                        Drizzle schema: subscriptions, forecasts
-│   ├── client.ts                        Postgres pool + Drizzle client
-│   └── migrations/                      Generated SQL migrations
-├── AGENTS.md                            Cross-tool AI guidance (Cursor, Codex, etc.)
-├── CLAUDE.md                            Claude Code project memory (imports AGENTS.md)
-├── README.md                            Collaborator-facing project intro
-├── LICENSE                              MIT
-├── package.json
-├── tsconfig.json
-└── next.config.ts
+│   ├── client.ts                        Postgres pool + Drizzle client (singleton)
+│   └── migrations/                      Generated SQL migrations + meta
+├── docs/
+│   ├── PLAN.md                          Phased build order + status
+│   ├── CONTRACT.md                      Backend JSON shape (locked in)
+│   ├── ARCHITECTURE.md                  This file
+│   ├── OPERATIONS.md                    Day-to-day monitoring runbook
+│   └── reference/original-design.html   Friend's design (read-only)
+├── proxy.ts                             Next.js 16 middleware (renamed from middleware.ts)
+├── drizzle.config.ts                    Drizzle Kit config
+├── vercel.json                          Vercel Cron config
+├── AGENTS.md / CLAUDE.md                AI agent guidance
+└── package.json / tsconfig.json / next.config.ts
 ```
 
 ## Key decisions
@@ -93,16 +88,36 @@ Everything else is server-rendered. Most pages are server components that import
 ### Data flow (Phase 3)
 
 ```
-lib/data.ts (mock TS const fallback)
-   ↓
-lib/forecast-store.ts
-   ↓
-Postgres forecasts table when DATABASE_URL is configured and seeded
-   ↓
-server-rendered dashboard pages + /api/forecast
+Vercel Cron (daily, 10:00 UTC)
+   → POST/GET /api/refresh   (auth: Bearer CRON_SECRET)
+   → upsertMockForecasts({ jitter: true })
+   → Neon Postgres: forecasts table (20 rows, payload as jsonb)
+
+Browser → dashboard page → lib/forecast-store.ts → Neon
+                                          ↓ (fallback if DATABASE_URL unset or DB empty)
+                                  PL / PL_EXTENDED mock constants
 ```
 
-Forecast-backed dashboard pages are marked `dynamic = 'force-dynamic'` so hourly DB refreshes are visible at request time. Client-only localStorage views still use mock forecast constants for browser-side portfolio/watchlist calculations.
+Forecast-backed dashboard pages are marked `dynamic = 'force-dynamic'` so DB refreshes are visible at request time. Client-only localStorage views (portfolio, watchlist) still use mock forecast constants for browser-side calculations.
+
+### Subscription flow
+
+```
+Stripe Checkout → /api/stripe/post-checkout (sync) → setUserSubscription
+                                                       ↓ writes to BOTH:
+                                                       ├── Neon: subscriptions
+                                                       └── Clerk: publicMetadata
+
+Later events    → /api/stripe/webhook → setUserSubscription (same)
+
+proxy.ts (edge middleware) reads Clerk publicMetadata
+   → fast optimistic gate, can't reach Postgres from edge
+
+Route handlers (e.g. /api/forecast) read from Neon directly
+   → authoritative gate, defense-in-depth
+```
+
+The double-write keeps middleware fast (no DB roundtrip per request) while the DB stays authoritative. `setUserSubscription` in `lib/subscription.ts` is the only function that mutates this state — both `post-checkout` and `webhook` go through it.
 
 ### Why no Tailwind
 The reference design has gradient text, layered shadows, custom keyframes — these translate cleanly to handwritten CSS but would be tedious in Tailwind utility classes. The CSS was already written. Switching costs nothing now, costs a day later.
@@ -121,18 +136,19 @@ Originally we'd have written ~10 specialized chart components (one per chart in 
 | Forecast data      | DB + mock fallback               | Daily cron writes DB; mock fallback keeps local dev usable |
 | User profile       | Clerk (Phase 2)                  | Don't duplicate into our DB            |
 
-## Auth gate plan (Phase 2 preview)
+## Auth + subscription gates (live)
 
-The friend's HTML had a custom `#auth-screen` overlay. We're replacing it entirely:
+Three tiers, enforced in `proxy.ts`:
 
-- **Public routes:** `/`, `/pricing`, `/sign-in/*`, `/sign-up/*` (Clerk-rendered)
-- **Gated routes:** everything dashboard-related (will live under `app/(dashboard)/`) — Clerk middleware redirects to `/sign-in` if no session
-- **Subscription gate:** API routes call `auth()` + check Stripe subscription before returning data; UI shows a "Subscribe" prompt for routes that need it
+1. **Public:** `/sign-in/*`, `/sign-up/*`, `/api/stripe/webhook`, `/api/refresh` (the last two are gated by their own signature / bearer checks inside the route handler).
+2. **Auth only:** `/pricing`, `/api/stripe/checkout`, `/api/stripe/post-checkout`. Sign-in required, no subscription needed.
+3. **Auth + active subscription:** everything else under `app/(dashboard)/` plus `/api/forecast`. Subscription means status `active` or `trialing`.
 
-When Phase 2 lands, the existing dashboard pages (`macro`, `screener`, `forecast`, `comparison`, `portfolio`, `watchlist`, `ticker/[symbol]`) move into `app/(dashboard)/` so they can share an auth-checking layout. The route group is invisible in the URL (`/macro` stays `/macro`).
+Unauthenticated dashboard requests are redirected to `/sign-in`. Authenticated-but-unsubscribed requests are redirected to `/pricing` (pages) or returned as JSON `402` (API routes).
 
 ## Vercel deploy notes
 
-The app deploys to Vercel out of the box — no env vars in Phase 1, no native dependencies, no filesystem reads at runtime. The build that passes locally is the same build Vercel runs. Static routes are pre-rendered; dynamic routes (anything reading `searchParams` or `params`) render on each request.
-
-The only Phase 1 limitation: **localStorage is per-browser-per-device, not per-user.** A subscriber on their phone won't see the watchlist they saved on their laptop. That's expected for v1 and gets fixed in Phase 3 if we promote to DB.
+- **Auto-deploy** on push to `main`.
+- **Env vars required for Production:** `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRICE_ID`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `CRON_SECRET`.
+- **Cron:** `vercel.json` declares one job (`0 10 * * *` → `/api/refresh`). Vercel reads it during build. Verify in Vercel → Settings → Cron Jobs.
+- **localStorage limitation:** per-browser-per-device, not per-user. A subscriber on their phone won't see the watchlist they saved on their laptop. Acceptable for v1; promote to DB later if needed.
