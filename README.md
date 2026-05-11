@@ -2,7 +2,7 @@
 
 Revenue forecasting dashboard driven by macro signals. Connects FRED macro indicators to company quarterly revenue using walk-forward validated models, exposing anchor forecasts, macro signals, and adaptive blends with valuation bands per ticker.
 
-> **Status:** Phase 1 complete — full dashboard works locally with mock data. Phase 2 (Clerk auth + Stripe paywall) is next. See [`docs/PLAN.md`](docs/PLAN.md).
+> **Status:** Phase 3 in progress — dashboard, Clerk auth, Stripe paywall, Drizzle schema, and DB-backed forecast/subscription routes are wired. Neon migration and QStash schedule setup are next. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## What it does
 
@@ -34,8 +34,8 @@ Plus a valuation band (bear / base / bull, with trustworthiness-adjusted variant
 - **Chart.js** via `react-chartjs-2`
 - Handwritten CSS (no Tailwind) — see `app/globals.css`
 - **Hosting:** Vercel
-- **Coming in Phase 2:** Clerk (auth), Stripe (subscriptions)
-- **Coming in Phase 3:** Neon Postgres + Drizzle ORM, Upstash QStash (cron)
+- **Auth/payments:** Clerk, Stripe subscriptions
+- **Phase 3 in progress:** Neon Postgres + Drizzle ORM, Vercel Cron
 
 ## Run locally
 
@@ -50,7 +50,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-That's it — no `.env` file, no API keys, no database needed in Phase 1. All data is mocked.
+For dashboard-only local exploration, forecast pages fall back to mock data when `DATABASE_URL` is not set. Auth, Stripe, database migrations, and cron refreshes require the relevant `.env.local` values.
 
 ## Project layout
 
@@ -92,11 +92,16 @@ macrolens/
 ├── lib/
 │   ├── types.ts                         ForecastPayload, FinancialsPayload, etc.
 │   ├── data.ts                          Barrel re-export
+│   ├── forecast-store.ts                DB-backed forecast reads + mock fallback
 │   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (20 total)
 │   ├── financials.ts                    FINANCIALS for 5 tickers
 │   ├── indicators.ts                    INDS, REGIMES, group icons/colors
 │   ├── helpers.ts                       fmt, pct, yc, alb, cb, sb
 │   └── store.ts                         SSR-safe localStorage helpers
+├── db/
+│   ├── schema.ts                        Drizzle schema: subscriptions, forecasts
+│   ├── client.ts                        Postgres pool + Drizzle client
+│   └── migrations/                      Generated SQL migrations
 └── docs/
     ├── PLAN.md                          Phased build order + status. Read first.
     ├── CONTRACT.md                      Backend JSON shape (locked in)
@@ -114,8 +119,8 @@ If you're working on the Python forecasting side: produce JSON matching that con
 ## Roadmap
 
 - ✅ **Phase 1 — Dashboard:** All pages working with mock data. Done.
-- ⬜ **Phase 2 — Auth + Paywall:** Clerk login + Stripe subscriptions.
-- ⬜ **Phase 3 — DB + Cron:** Neon Postgres + hourly cron writes fresh forecasts.
+- ✅ **Phase 2 — Auth + Paywall:** Clerk login + Stripe subscriptions.
+- 🟨 **Phase 3 — DB + Cron:** Drizzle/schema/routes wired; Neon migration and Vercel env setup remain.
 - ⬜ **Phase 4 — Real Model + Launch:** Python forecast service feeds the cron, custom domain, live mode.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the full task list.
@@ -128,6 +133,8 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full task list.
 | `npm run build` | Production build (catches type errors)   |
 | `npm run start` | Run the production build                 |
 | `npm run lint`  | ESLint check                             |
+| `npm run db:generate` | Generate Drizzle migrations       |
+| `npm run db:migrate` | Run Drizzle migrations against `DATABASE_URL` |
 
 ## License
 

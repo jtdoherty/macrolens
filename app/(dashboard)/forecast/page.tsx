@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PL } from '@/lib/data';
+import { getForecast, getKnownForecastTickers } from '@/lib/forecast-store';
 import { fmt, pct, yc, alb, cb, sb } from '@/lib/helpers';
 import { ValuationBand } from '@/components/ValuationBand';
 import { RevenueChart } from '@/components/charts/RevenueChart';
 import type { ForecastPayload } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
 
 // Ticker selection lives in the URL (?ticker=MSFT) so the page is shareable
 // and the back button works. Defaults to AAPL when no param present.
@@ -15,8 +17,9 @@ export default async function ForecastPage({
 }) {
   const { ticker: requested } = await searchParams;
   const ticker = (requested ?? 'AAPL').toUpperCase();
-  const d = PL[ticker];
+  const d = await getForecast(ticker);
   if (!d) notFound();
+  const tickerOptions = await getKnownForecastTickers();
 
   return (
     <>
@@ -37,7 +40,7 @@ export default async function ForecastPage({
       <div className="pb">
         {/* TICKER SELECTOR */}
         <div className="ts">
-          {Object.keys(PL).map((t) => (
+          {tickerOptions.map((t) => (
             <Link key={t} href={`/forecast?ticker=${t}`} className={`tc${t === ticker ? ' active' : ''}`}>
               {t}
             </Link>

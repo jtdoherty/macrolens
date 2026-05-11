@@ -6,7 +6,7 @@
 // Three tiers of access:
 //
 // 1. Public — no auth required:
-//    /sign-in/*, /sign-up/*, /api/stripe/webhook
+//    /sign-in/*, /sign-up/*, /api/stripe/webhook, /api/refresh
 //
 // 2. Authenticated, subscription not required:
 //    /pricing, /api/stripe/checkout, /api/stripe/post-checkout
@@ -16,12 +16,13 @@
 
 import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { isActiveStatus, type SubscriptionMetadata } from '@/lib/subscription';
+import { isActiveStatus, type SubscriptionMetadata } from '@/lib/subscription-status';
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/stripe/webhook',
+  '/api/refresh',
 ]);
 
 // Auth required, but subscription is NOT required.

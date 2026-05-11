@@ -1,6 +1,6 @@
 # Architecture Notes
 
-## Directory layout (actual, as of Phase 1 complete)
+## Directory layout (actual, as of Phase 3 in progress)
 
 ```
 macrolens/
@@ -40,6 +40,7 @@ macrolens/
 ├── lib/
 │   ├── types.ts                         ForecastPayload, FinancialsPayload, Indicator, Holding
 │   ├── data.ts                          Barrel re-export of all mock data
+│   ├── forecast-store.ts                DB-backed forecast reads + mock fallback
 │   ├── forecasts.ts                     PL (5 core) + PL_EXTENDED (15 more, 20 total)
 │   ├── financials.ts                    FINANCIALS — 5y annual + 12q quarterly + ratios per ticker
 │   ├── indicators.ts                    INDS, FLASH_INDS, REGIMES, GROUP_* maps
@@ -52,6 +53,10 @@ macrolens/
 │   └── reference/
 │       └── original-design.html         Friend's design (read-only reference)
 ├── public/                              Static assets
+├── db/
+│   ├── schema.ts                        Drizzle schema: subscriptions, forecasts
+│   ├── client.ts                        Postgres pool + Drizzle client
+│   └── migrations/                      Generated SQL migrations
 ├── AGENTS.md                            Cross-tool AI guidance (Cursor, Codex, etc.)
 ├── CLAUDE.md                            Claude Code project memory (imports AGENTS.md)
 ├── README.md                            Collaborator-facing project intro
@@ -85,16 +90,19 @@ Default to server components. Mark `'use client'` only when needed:
 
 Everything else is server-rendered. Most pages are server components that import small client islands.
 
-### Data flow (Phase 1)
+### Data flow (Phase 3)
 
 ```
-lib/data.ts (mock TS const)
-   ↓ imported directly by server components
-   ↓ also exposed via /api/forecast for future client fetches
-[page.tsx renders]
+lib/data.ts (mock TS const fallback)
+   ↓
+lib/forecast-store.ts
+   ↓
+Postgres forecasts table when DATABASE_URL is configured and seeded
+   ↓
+server-rendered dashboard pages + /api/forecast
 ```
 
-In Phase 1 it's fine for server components to import `lib/data.ts` directly — no auth gating yet. Phase 2 makes dashboard pages fetch from `/api/forecast` instead so the subscription check applies.
+Forecast-backed dashboard pages are marked `dynamic = 'force-dynamic'` so hourly DB refreshes are visible at request time. Client-only localStorage views still use mock forecast constants for browser-side portfolio/watchlist calculations.
 
 ### Why no Tailwind
 The reference design has gradient text, layered shadows, custom keyframes — these translate cleanly to handwritten CSS but would be tedious in Tailwind utility classes. The CSS was already written. Switching costs nothing now, costs a day later.
@@ -109,8 +117,8 @@ Originally we'd have written ~10 specialized chart components (one per chart in 
 | Sidebar collapsed  | localStorage (`ml_sb_collapsed`) | Never — UI state                       |
 | Watchlist          | localStorage (`ml_wl`)           | Phase 3 if cross-device sync wanted    |
 | Portfolio          | localStorage (`ml_port`)         | Phase 3 if cross-device sync wanted    |
-| Subscription state | DB (Phase 3)                     | —                                      |
-| Forecast data      | mock const → DB (Phase 3)        | —                                      |
+| Subscription state | DB + Clerk metadata cache        | DB is source of truth; Clerk metadata keeps proxy fast |
+| Forecast data      | DB + mock fallback               | Daily cron writes DB; mock fallback keeps local dev usable |
 | User profile       | Clerk (Phase 2)                  | Don't duplicate into our DB            |
 
 ## Auth gate plan (Phase 2 preview)

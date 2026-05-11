@@ -1,16 +1,19 @@
 import Link from 'next/link';
-import { INDS, REGIMES, INDICATOR_GROUPS, GROUP_ICONS, GROUP_COLORS, PL, FINANCIALS } from '@/lib/data';
+import { INDS, REGIMES, INDICATOR_GROUPS, GROUP_ICONS, GROUP_COLORS, FINANCIALS } from '@/lib/data';
+import { getForecasts } from '@/lib/forecast-store';
 import { pct } from '@/lib/helpers';
 import type { Indicator } from '@/lib/types';
 
-export default function MacroPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function MacroPage() {
   const up = INDS.filter((i) => i.s === 'Upside').length;
   const dn = INDS.filter((i) => i.s === 'Downside').length;
   const ca = INDS.filter((i) => i.s === 'Caution').length;
   const score = Math.round(((up - dn) / INDS.length) * 100);
   const scoreColor = score > 10 ? '#0d9e6e' : score < -10 ? '#e03e3e' : '#c47a0c';
   const scoreLbl = score > 10 ? 'Expansionary' : score < -10 ? 'Contractionary' : 'Mixed';
-  const tickers = Object.values(PL);
+  const tickers = await getForecasts();
 
   return (
     <>

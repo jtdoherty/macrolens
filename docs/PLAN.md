@@ -17,7 +17,7 @@ Phase 1 ships the dashboard with mock data and no auth/payment. Later phases add
 - **Auth (Phase 2):** Clerk
 - **Payments (Phase 2):** Stripe (Checkout + Customer Portal + webhooks)
 - **DB (Phase 3):** Neon Postgres + Drizzle ORM
-- **Cron (Phase 3):** Upstash QStash → `/api/refresh` route, every 1 hour
+- **Cron (Phase 3):** Vercel Cron → `/api/refresh` route, daily
 - **Domain (later):** TBD via Vercel Registrar / Cloudflare Registrar
 
 ## Architecture overview
@@ -32,10 +32,10 @@ Phase 1 ships the dashboard with mock data and no auth/payment. Later phases add
        → app/api/refresh/route.ts         (Phase 3 cron target)
        → app/api/stripe/{checkout,webhook}/route.ts  (Phase 2)
 
-[Database — Phase 3 only]
+[Database — Phase 3]
   Postgres on Neon
     - subscriptions (userId, stripeCustomerId, status, currentPeriodEnd)
-    - forecasts (ticker, payload jsonb, updatedAt)
+    - forecasts (ticker, payload jsonb, isCore, updatedAt)
 
 [External backend — Phase 4]
   Friend's Python service: produces JSON matching ForecastPayload type
@@ -102,15 +102,16 @@ Goal: marketing landing stays public, dashboard requires Clerk login + active St
 
 Goal: subscription state lives in Postgres, cron writes fresh mock data every hour.
 
-- [ ] 3.1 Sign up for Neon, create project, paste `DATABASE_URL` into Vercel env
-- [ ] 3.2 `npm install drizzle-orm drizzle-kit pg`
-- [ ] 3.3 Define schema in `db/schema.ts`: `subscriptions`, `forecasts`
-- [ ] 3.4 Run initial migration
-- [ ] 3.5 Update Stripe webhook to write to `subscriptions` table
-- [ ] 3.6 Update `/api/forecast` to check `subscriptions` and read from `forecasts` table
-- [ ] 3.7 Sign up for Upstash QStash, set up a 1-hour schedule hitting `/api/refresh`
-- [ ] 3.8 `app/api/refresh/route.ts` — recompute mock forecasts (jitter), write to DB
-- [ ] 3.9 Verify QStash actually fires hourly and DB updates
+- [x] 3.1 Sign up for Neon, create project, paste `DATABASE_URL` into local env
+- [ ] 3.1b Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `CRON_SECRET` to Vercel env
+- [x] 3.2 `npm install drizzle-orm drizzle-kit pg`
+- [x] 3.3 Define schema in `db/schema.ts`: `subscriptions`, `forecasts`
+- [x] 3.4 Run initial migration
+- [x] 3.5 Update Stripe webhook to write to `subscriptions` table
+- [x] 3.6 Update `/api/forecast` to check `subscriptions` and read from `forecasts` table
+- [x] 3.7 Add Vercel Cron schedule hitting `/api/refresh` daily
+- [x] 3.8 `app/api/refresh/route.ts` — recompute mock forecasts (jitter), write to DB
+- [ ] 3.9 Verify Vercel Cron fires daily and DB updates
 
 ### Phase 4 — Real backend, polish, launch
 
@@ -139,27 +140,12 @@ Explicitly skipping for now, not lost — just deferred:
 
 ## Where we left off
 
-Last updated: 2026-05-09. **Phase 2 is COMPLETE — all 10 steps checked off.** Auth + paywall fully wired. New visitors must sign in (Clerk) AND have an active subscription (Stripe) to see dashboard pages. The `/api/forecast` endpoint returns 402 to non-subscribers.
+Last updated: 2026-05-09. **Phase 3 is in progress.** Neon is created, Drizzle migrations have been applied, and the `forecasts` table has been seeded with 20 mock forecast payloads. DB-backed subscription helpers, `/api/forecast` DB reads, and `/api/refresh` mock forecast refresh are wired. Forecast-backed dashboard pages are dynamic and read through `lib/forecast-store.ts`, which falls back to mock data when `DATABASE_URL` is not configured or the DB is empty.
 
-**Required smoke-test before claiming Phase 2 done:**
+**Next required steps:**
 
-1. **Webhook secret first.** Install [Stripe CLI](https://stripe.com/docs/stripe-cli) (or skip if you've already got one set up). Then in a separate terminal:
-   ```
-   stripe login
-   stripe listen --forward-to localhost:3000/api/stripe/webhook
-   ```
-   It prints `Ready! Your webhook signing secret is whsec_…`. Copy that value into `.env.local` as `STRIPE_WEBHOOK_SECRET=whsec_…` and restart `npm run dev`. Keep `stripe listen` running while you test.
-
-2. `npm run dev` and visit `http://localhost:3000`.
-   - Already signed in (from Phase 2 part 1)? Should redirect to `/pricing` (you don't have a subscription yet).
-   - Click "Start 7-day free trial".
-   - Stripe-hosted Checkout opens. Use test card `4242 4242 4242 4242`, any future expiry, any CVC, any zip.
-   - After payment, you redirect to `/?subscribed=1` — dashboard loads.
-3. Sign out, sign back in, confirm you land on the dashboard (not /pricing).
-4. Try `curl http://localhost:3000/api/forecast` (without cookies) — should be 401 / redirect to sign-in.
-
-**Next session = Phase 3 (DB + cron).** Before then:
-1. Sign up at [neon.tech](https://neon.tech), create a project, copy the connection string (`DATABASE_URL`).
-2. Sign up at [upstash.com](https://upstash.com) for QStash (cron triggers), grab the QStash token + signing keys. (Optional — we can also use Vercel Cron once you're on Pro.)
-
-Resume by reading the Phase 3 unchecked boxes below.
+1. Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `CRON_SECRET` to Vercel project env vars for Production.
+2. Deploy the current code so Vercel creates the daily cron from `vercel.json`.
+3. Check Vercel → Settings → Cron Jobs and verify `/api/refresh` is listed.
+4. Smoke-test signup/subscription again, then verify `/api/forecast` returns 402 for an unsubscribed signed-in user and forecast JSON for an active/trialing user.
+5. After the first scheduled run, verify `forecasts.updated_at` changes in Neon.

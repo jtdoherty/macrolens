@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { PL, FLASH_INDS } from '@/lib/data';
+import { FLASH_INDS } from '@/lib/data';
+import { getForecasts } from '@/lib/forecast-store';
 import { pct, yc, sb, cb } from '@/lib/helpers';
 import type { ForecastPayload } from '@/lib/types';
 
-export default function HomePage() {
-  const tickers = Object.values(PL);
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const tickers = await getForecasts();
   const byYoy = [...tickers].sort((a, b) => b.forecast_revenue_yoy - a.forecast_revenue_yoy);
   const best = byYoy.slice(0, 5);
   const worst = [...byYoy].reverse().slice(0, 5);

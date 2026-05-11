@@ -1,18 +1,20 @@
 import Link from 'next/link';
-import { PL_EXTENDED } from '@/lib/data';
+import { getForecastMap } from '@/lib/forecast-store';
 import { fmt, pct, yc, sb, cb } from '@/lib/helpers';
 import { ComparisonRevenueChart, ComparisonForecastChart, COMPARISON_COLORS } from '@/components/charts/ComparisonCharts';
 import type { ForecastPayload } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 const MAX_TICKERS = 4;
 const DEFAULT_TICKERS = ['AAPL', 'MSFT'];
 
-function parseTickers(raw: string | undefined): string[] {
+function parseTickers(raw: string | undefined, source: Record<string, ForecastPayload>): string[] {
   if (!raw) return DEFAULT_TICKERS;
   return raw
     .split(',')
     .map((t) => t.trim().toUpperCase())
-    .filter((t) => t && PL_EXTENDED[t])
+    .filter((t) => t && source[t])
     .slice(0, MAX_TICKERS);
 }
 
@@ -32,9 +34,10 @@ export default async function ComparisonPage({
   searchParams: Promise<{ tickers?: string }>;
 }) {
   const sp = await searchParams;
-  const selected = parseTickers(sp.tickers);
-  const cols = selected.map((t) => PL_EXTENDED[t]).filter(Boolean);
-  const allKeys = Object.keys(PL_EXTENDED);
+  const forecasts = await getForecastMap({ extended: true });
+  const selected = parseTickers(sp.tickers, forecasts);
+  const cols = selected.map((t) => forecasts[t]).filter(Boolean);
+  const allKeys = Object.keys(forecasts);
 
   return (
     <>
@@ -54,7 +57,7 @@ export default async function ComparisonPage({
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {allKeys.map((t) => {
               const inList = selected.includes(t);
-              const d = PL_EXTENDED[t];
+              const d = forecasts[t];
               const idx = selected.indexOf(t);
               return (
                 <Link key={t} href={toggleHref(selected, t)} className={`ctb${inList ? ' in' : ''}`}>

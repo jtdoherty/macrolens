@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { PL, PL_EXTENDED } from '@/lib/data';
+import { getForecastMap, getForecasts } from '@/lib/forecast-store';
 import { pct, yc, sb, cb } from '@/lib/helpers';
 import { ScreenerFilters } from '@/components/ScreenerFilters';
 import { WatchlistStar } from '@/components/WatchlistStar';
 import type { ForecastPayload } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
 
 type SortMode = 'signal' | 'confidence' | 'upside' | 'yoy';
 
@@ -49,7 +51,10 @@ export default async function ScreenerPage({
 }) {
   const sp = await searchParams;
   const sort: SortMode = sp.sort && ['signal', 'confidence', 'upside', 'yoy'].includes(sp.sort) ? sp.sort : 'signal';
-  const allTickers = Object.values(PL_EXTENDED);
+  const [allTickers, coreTickers] = await Promise.all([
+    getForecasts({ extended: true }),
+    getForecastMap(),
+  ]);
   const sectors = [...new Set(allTickers.map((t) => t.sector!).filter(Boolean))].sort();
   const rows = applyFilters(allTickers, { ...sp, sort });
 
@@ -130,7 +135,7 @@ export default async function ScreenerPage({
               ) : (
                 rows.map((d) => {
                   const ups = (d.valuation_band.trustworthy_base - d.current_price) / d.current_price;
-                  const inCore = !!PL[d.ticker];
+                  const inCore = !!coreTickers[d.ticker];
                   return (
                     <tr key={d.ticker}>
                       <td>

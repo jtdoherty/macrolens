@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PL, FINANCIALS } from '@/lib/data';
+import { FINANCIALS } from '@/lib/data';
+import { getForecast } from '@/lib/forecast-store';
 import { pct, sb, cb } from '@/lib/helpers';
 import { ForecastTab } from './_tabs/Forecast';
 import { OverviewTab } from './_tabs/Overview';
@@ -8,6 +9,8 @@ import { IncomeTab } from './_tabs/Income';
 import { BalanceTab } from './_tabs/Balance';
 import { CashFlowTab } from './_tabs/CashFlow';
 import { RatiosTab } from './_tabs/Ratios';
+
+export const dynamic = 'force-dynamic';
 
 const TABS = [
   { key: 'forecast', label: 'Forecast' },
@@ -29,7 +32,7 @@ export default async function TickerPage({
   const { symbol } = await params;
   const { tab: tabParam } = await searchParams;
   const ticker = symbol.toUpperCase();
-  const d = PL[ticker];
+  const d = await getForecast(ticker);
   if (!d) notFound();
 
   const f = FINANCIALS[ticker];
